@@ -103,7 +103,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👥 Authors
 
-- Your Name - Initial work
+- Sameer P Jadhav - Initial Contributor & Founder
 
 ## 🙏 Acknowledgments
 
