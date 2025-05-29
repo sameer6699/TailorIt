@@ -1,8 +1,8 @@
-# <img src="assets/images/icon.png" alt="TailorIt Logo" width="50" height="50" style="vertical-align: middle; margin-right: 10px;" /> TailorIt
+#  TailorIt #
 
 <div align="center">
 
-![TailorIt Banner](assets/images/icon.png)
+
 
 ### Revolutionizing the Tailoring Experience
 
