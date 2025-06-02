@@ -6,19 +6,39 @@ import Colors from '@/constants/Colors';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBar } from 'expo-status-bar';
-import { Scissors } from 'lucide-react-native';
+import { Scissors, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, signUp, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isLogin, setIsLogin] = useState(true);
+  const [userType, setUserType] = useState<'user' | 'tailor'>('user');
 
-  const handleSubmit = () => {
-    // In a real app, authenticate the user
-    // For demo purposes, just navigate to the main app
-    router.replace('/(tabs)');
+  const handleSubmit = async () => {
+    try {
+      if (isLogin) {
+        await signIn(email, password);
+      } else {
+        if (userType === 'tailor') {
+          // For tailors, just navigate to the registration form
+          router.push({
+            pathname: '/tailor/register',
+            params: { email, fullName }
+          });
+        } else {
+          // For regular users, proceed with signup
+          await signUp(email, password, fullName, userType);
+        }
+      }
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      // TODO: Show error message to user
+    }
   };
 
   return (
@@ -37,13 +57,53 @@ export default function LoginScreen() {
             <Text style={styles.tagline}>Your Perfect Tailoring Solution</Text>
           </View>
 
+          {/* User Type Toggle - Only show when not in signup mode */}
+          {isLogin && (
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.toggleButton,
+                  userType === 'user' && styles.activeToggleButton
+                ]}
+                onPress={() => setUserType('user')}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  userType === 'user' && styles.activeToggleButtonText
+                ]}>User</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.toggleButton,
+                  userType === 'tailor' && styles.activeToggleButton
+                ]}
+                onPress={() => setUserType('tailor')}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  userType === 'tailor' && styles.activeToggleButtonText
+                ]}>Tailor</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Show selected user type when in signup mode */}
+          {!isLogin && (
+            <View style={styles.selectedTypeContainer}>
+              <Text style={styles.selectedTypeText}>
+                Creating Account As {userType === 'user' ? 'User' : 'Tailor'}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.formContainer}>
-            <Text style={styles.headerText}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
-            
             {!isLogin && (
               <Input
                 label="Full Name"
                 placeholder="Enter your full name"
+                value={fullName}
+                onChangeText={setFullName}
                 autoCapitalize="words"
                 returnKeyType="next"
               />
@@ -59,14 +119,16 @@ export default function LoginScreen() {
               returnKeyType="next"
             />
             
-            <Input
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              returnKeyType="done"
-            />
+            {isLogin && (
+              <Input
+                label="Password"
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                returnKeyType="done"
+              />
+            )}
             
             {isLogin && (
               <TouchableOpacity style={styles.forgotPassword}>
@@ -75,21 +137,10 @@ export default function LoginScreen() {
             )}
 
             <Button 
-              title={isLogin ? 'Log In' : 'Sign Up'} 
-              onPress={handleSubmit} 
+              title={isLogin ? `Log In As ${userType === 'user' ? 'User' : 'Tailor'}` : 'Next'} 
+              onPress={handleSubmit}
+              loading={isLoading}
               style={styles.submitButton}
-            />
-
-            <View style={styles.orContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.orText}>OR</Text>
-              <View style={styles.divider} />
-            </View>
-
-            <Button
-              title="Continue as Guest"
-              variant="outline"
-              onPress={() => router.replace('/(tabs)')}
             />
 
             <View style={styles.switchContainer}>
@@ -145,17 +196,46 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginTop: 8,
   },
+  toggleContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 24,
+    marginBottom: 24,
+    backgroundColor: Colors.light.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    padding: 4,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  activeToggleButton: {
+    backgroundColor: Colors.light.primary,
+  },
+  toggleButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: Colors.light.text,
+  },
+  activeToggleButtonText: {
+    color: Colors.light.card,
+  },
+  selectedTypeContainer: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  selectedTypeText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+    color: Colors.light.text,
+  },
   formContainer: {
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
-  },
-  headerText: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: Colors.light.text,
-    marginBottom: 24,
-    textAlign: 'center',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -169,36 +249,20 @@ const styles = StyleSheet.create({
   submitButton: {
     marginBottom: 16,
   },
-  orContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.light.border,
-  },
-  orText: {
-    marginHorizontal: 16,
-    color: Colors.light.text,
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-  },
   switchContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
   },
   switchText: {
-    color: Colors.light.text,
     fontFamily: 'Inter-Regular',
     fontSize: 14,
+    color: Colors.light.text,
   },
   switchButton: {
-    color: Colors.light.primary,
     fontFamily: 'Inter-Medium',
     fontSize: 14,
+    color: Colors.light.primary,
     marginLeft: 4,
   },
 });
